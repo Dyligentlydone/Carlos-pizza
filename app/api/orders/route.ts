@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { calculateOrderPricing, PreviewItemInput } from '@/lib/pricing'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,10 +12,10 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.customer_name || !body.phone || !body.items || !body.total) {
+    // Validate required fields (total is NOT required — we calculate it)
+    if (!body.customer_name || !body.phone || !body.items) {
       return NextResponse.json(
-        { error: 'Missing required fields: customer_name, phone, items, total' },
+        { error: 'Missing required fields: customer_name, phone, items' },
         { status: 400 }
       )
     }
@@ -27,19 +28,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Transform items if customizations is a string (convert to array)
-    const items = body.items.map((item: any) => ({
-      name: item.name,
-      quantity: item.quantity,
-      customizations: item.customizations 
-        ? (typeof item.customizations === 'string' 
-            ? item.customizations.split(',').map((s: string) => s.trim())
-            : item.customizations)
-        : [],
-      price: item.price || 0
+    // Normalize incoming items for the pricing engine
+    const pricingInput: PreviewItemInput[] = body.items.map((item: any) => ({
+      name: String(item?.name ?? ''),
+      quantity: typeof item?.quantity === 'number' ? item.quantity : parseInt(item?.quantity) || 1,
+      customizations:
+        typeof item?.customizations === 'string'
+          ? item.customizations
+          : Array.isArray(item?.customizations)
+          ? item.customizations.join(', ')
+          : undefined,
     }))
 
-    // Create order object
+    // Server-side pricing — source of truth
+    const pricing = calculateOrderPricing(pricingInput, { taxRate: 0 })
+
+    if (pricing.errors.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'One or more items could not be priced',
+          details: pricing.errors,
+        },
+        { status: 400 }
+      )
+    }
+
+    // Build the items stored on the order with authoritative prices
+    const items = pricing.items.map((it) => ({
+      name: it.name,
+      quantity: it.quantity,
+      unit_price: it.unit_price,
+      total_price: it.total_price,
+      customizations: it.breakdown?.topping_names ?? [],
+      size: it.breakdown?.size ?? null,
+      category: it.breakdown?.category ?? null,
+    }))
+
+    // Create order object (server-calculated subtotal/total)
     const orderData = {
       call_id: body.call_id || null,
       customer_name: body.customer_name,
@@ -48,8 +73,8 @@ export async function POST(request: NextRequest) {
       address: body.address || null,
       order_type: body.order_type || 'pickup',
       items: items,
-      subtotal: body.subtotal || body.total,
-      total: body.total,
+      subtotal: pricing.subtotal,
+      total: pricing.total,
       status: 'pending',
       notes: body.notes || null,
       shop_id: process.env.NEXT_PUBLIC_SHOP_ID || 'shop_001',
@@ -75,7 +100,9 @@ export async function POST(request: NextRequest) {
       success: true,
       order_id: data.id,
       message: 'Order placed successfully',
-      order: data
+      subtotal: pricing.subtotal,
+      total: pricing.total,
+      order: data,
     }, { status: 201 })
 
   } catch (error: any) {
