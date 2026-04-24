@@ -34,7 +34,15 @@ import { calculateOrderPricing, PreviewItemInput } from '@/lib/pricing'
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const raw = await request.json()
+
+    // Retell may send either the flat args OR a wrapped payload:
+    //   { name, args: {...}, call: {...} }
+    // Normalize to a flat body regardless.
+    const body =
+      raw && typeof raw === 'object' && raw.args && typeof raw.args === 'object'
+        ? raw.args
+        : raw
 
     // Validate order_type
     if (!body.order_type || !['pickup', 'delivery'].includes(body.order_type)) {

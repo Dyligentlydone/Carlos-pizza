@@ -10,7 +10,15 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    const body = await request.json()
+    const raw = await request.json()
+
+    // Retell may send either the flat args OR a wrapped payload:
+    //   { name, args: {...}, call: {...} }
+    // Normalize to a flat body regardless.
+    const body =
+      raw && typeof raw === 'object' && raw.args && typeof raw.args === 'object'
+        ? raw.args
+        : raw
 
     // Validate required fields (total is NOT required — we calculate it)
     if (!body.customer_name || !body.phone || !body.items) {
