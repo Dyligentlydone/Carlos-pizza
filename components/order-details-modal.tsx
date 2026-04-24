@@ -88,24 +88,48 @@ export function OrderDetailsModal({ order, onClose, onUpdateStatus }: OrderDetai
           <div className="space-y-3">
             <h3 className="font-semibold text-lg">Order Items</h3>
             <div className="border rounded-lg divide-y">
-              {order.items.map((item, index) => (
-                <div key={index} className="p-4 flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{item.quantity}x</span>
-                      <span>{item.name}</span>
-                    </div>
-                    {item.customizations && item.customizations.length > 0 && (
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        {item.customizations.join(', ')}
+              {order.items.map((item, index) => {
+                // Prefer new server-calculated totals, fall back to legacy `price` field.
+                const lineTotal =
+                  typeof item.total_price === 'number'
+                    ? item.total_price
+                    : typeof item.unit_price === 'number'
+                    ? item.unit_price * item.quantity
+                    : typeof item.price === 'number'
+                    ? item.price * item.quantity
+                    : null
+
+                const unit =
+                  typeof item.unit_price === 'number'
+                    ? item.unit_price
+                    : typeof item.price === 'number'
+                    ? item.price
+                    : null
+
+                return (
+                  <div key={index} className="p-4 flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{item.quantity}x</span>
+                        <span>{item.name}</span>
                       </div>
+                      {item.customizations && item.customizations.length > 0 && (
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          {item.customizations.join(', ')}
+                        </div>
+                      )}
+                      {unit !== null && item.quantity > 1 && (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {formatCurrency(unit)} each
+                        </div>
+                      )}
+                    </div>
+                    {lineTotal !== null && (
+                      <span className="font-medium">{formatCurrency(lineTotal)}</span>
                     )}
                   </div>
-                  {item.price && (
-                    <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 

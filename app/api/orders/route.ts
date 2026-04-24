@@ -36,6 +36,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const orderType = body.order_type || 'pickup'
+    const address = typeof body.address === 'string' ? body.address.trim() : ''
+
+    // Require address for delivery orders
+    if (orderType === 'delivery' && !address) {
+      return NextResponse.json(
+        { error: 'address is required for delivery orders' },
+        { status: 400 }
+      )
+    }
+
+    // Idempotency: if Retell retries with the same call_id, return the existing order
+    // instead of creating a duplicate.
+    const callId = body.call_id || null
+    if (callId) {
+      const { data: existing } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('call_id', callId)
+        .maybeSingle()
+
+      if (existing) {
+        return NextResponse.json(
+          {
+            success: true,
+            order_id: existing.id,
+            message: 'Order already exists for this call_id (idempotent)',
+            subtotal: existing.subtotal,
+            total: existing.total,
+            order: existing,
+            duplicate: true,
+          },
+          { status: 200 }
+        )
+      }
+    }
+
     // Normalize incoming items for the pricing engine
     const pricingInput: PreviewItemInput[] = body.items.map((item: any) => ({
       name: String(item?.name ?? ''),
@@ -74,12 +111,12 @@ export async function POST(request: NextRequest) {
 
     // Create order object (server-calculated subtotal/total)
     const orderData = {
-      call_id: body.call_id || null,
+      call_id: callId,
       customer_name: body.customer_name,
       phone: body.phone,
       email: body.email || null,
-      address: body.address || null,
-      order_type: body.order_type || 'pickup',
+      address: address || null,
+      order_type: orderType,
       items: items,
       subtotal: pricing.subtotal,
       total: pricing.total,
@@ -96,6 +133,29 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
+      // Handle unique-constraint race condition on call_id (idempotency backstop)
+      if (error.code === '23505' && callId) {
+        const { data: existing } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('call_id', callId)
+          .maybeSingle()
+        if (existing) {
+          return NextResponse.json(
+            {
+              success: true,
+              order_id: existing.id,
+              message: 'Order already exists for this call_id (idempotent)',
+              subtotal: existing.subtotal,
+              total: existing.total,
+              order: existing,
+              duplicate: true,
+            },
+            { status: 200 }
+          )
+        }
+      }
+
       console.error('Database error:', error)
       return NextResponse.json(
         { error: 'Failed to create order', details: error.message },

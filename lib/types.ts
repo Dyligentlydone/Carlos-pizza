@@ -5,7 +5,12 @@ export interface OrderItem {
   name: string;
   quantity: number;
   customizations?: string[];
+  /** Legacy field — old orders may have this. New orders use unit_price/total_price. */
   price?: number;
+  unit_price?: number;
+  total_price?: number;
+  size?: 'small' | 'medium' | 'large' | 'xl' | null;
+  category?: string | null;
 }
 
 export interface Order {
