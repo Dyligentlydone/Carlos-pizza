@@ -82,8 +82,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Strict output shape for Retell AI
+    // Build a natural-language summary so the Retell agent has
+    // something clear to say back to the customer after the tool call.
+    const itemLines = result.items
+      .map(
+        (it) =>
+          `${it.quantity}x ${it.name} - $${it.total_price.toFixed(2)}`
+      )
+      .join('; ')
+
+    const message = `Order total is $${result.total.toFixed(
+      2
+    )}. Items: ${itemLines}. Please confirm with the customer and, once they say yes, call place_order.`
+
     return NextResponse.json({
+      success: true,
+      message,
       items: result.items.map((it) => ({
         name: it.name,
         quantity: it.quantity,
