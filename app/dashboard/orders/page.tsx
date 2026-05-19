@@ -100,6 +100,13 @@ export default function OrdersPage() {
       .eq('id', orderId)
   }
 
+  async function updateOrder(orderId: string, updates: Partial<Order>) {
+    await supabase
+      .from('orders')
+      .update(updates)
+      .eq('id', orderId)
+  }
+
   function exportToCSV() {
     const headers = ['Time', 'Customer', 'Phone', 'Type', 'Items', 'Total', 'Status']
     const rows = filteredOrders.map(order => [
@@ -240,34 +247,18 @@ export default function OrdersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        {order.status === 'pending' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateOrderStatus(order.id, 'confirmed')}
-                          >
-                            Confirm
-                          </Button>
-                        )}
-                        {order.status === 'confirmed' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateOrderStatus(order.id, 'in_kitchen')}
-                          >
-                            Start
-                          </Button>
-                        )}
-                        {order.status === 'in_kitchen' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateOrderStatus(order.id, 'completed')}
-                          >
-                            Complete
-                          </Button>
-                        )}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={order.status}
+                          onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                          className="w-[140px]"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="in_kitchen">In Kitchen</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </Select>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -283,6 +274,7 @@ export default function OrdersPage() {
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onUpdateStatus={updateOrderStatus}
+          onUpdateOrder={updateOrder}
         />
       )}
     </div>
