@@ -16,12 +16,15 @@ interface OrderDetailsModalProps {
   onClose: () => void
   onUpdateStatus: (orderId: string, status: string) => void
   onUpdateOrder?: (orderId: string, updates: Partial<Order>) => Promise<void>
+  onDeleteOrder?: (orderId: string) => Promise<void>
 }
 
-export function OrderDetailsModal({ order, onClose, onUpdateStatus, onUpdateOrder }: OrderDetailsModalProps) {
+export function OrderDetailsModal({ order, onClose, onUpdateStatus, onUpdateOrder, onDeleteOrder }: OrderDetailsModalProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedOrder, setEditedOrder] = useState<Order>(order)
   const [isSaving, setIsSaving] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   async function handleSave() {
     if (!onUpdateOrder) return
@@ -50,6 +53,19 @@ export function OrderDetailsModal({ order, onClose, onUpdateStatus, onUpdateOrde
   function handleCancel() {
     setEditedOrder(order)
     setIsEditing(false)
+  }
+
+  async function handleDelete() {
+    if (!onDeleteOrder) return
+    
+    setIsDeleting(true)
+    try {
+      await onDeleteOrder(order.id)
+      onClose()
+    } catch (error) {
+      console.error('Failed to delete order:', error)
+      setIsDeleting(false)
+    }
   }
 
   function updateItem(index: number, updates: Partial<OrderItem>) {
@@ -372,10 +388,44 @@ export function OrderDetailsModal({ order, onClose, onUpdateStatus, onUpdateOrde
                   Cancel
                 </Button>
               </>
+            ) : showDeleteConfirm ? (
+              <>
+                <div className="flex-1 text-sm text-destructive font-medium flex items-center">
+                  Are you sure you want to delete this order?
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+              </>
             ) : (
-              <Button variant="outline" onClick={onClose} className="flex-1">
-                Close
-              </Button>
+              <>
+                {onDeleteOrder && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Order
+                  </Button>
+                )}
+                <Button variant="outline" onClick={onClose} className="flex-1">
+                  Close
+                </Button>
+              </>
             )}
           </div>
         </div>

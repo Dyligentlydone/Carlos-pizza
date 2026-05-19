@@ -36,6 +36,8 @@ export default function OrdersPage() {
           setOrders(prev => prev.map(order => 
             order.id === payload.new.id ? payload.new as Order : order
           ))
+        } else if (payload.eventType === 'DELETE') {
+          setOrders(prev => prev.filter(order => order.id !== payload.old.id))
         }
       })
       .subscribe()
@@ -105,6 +107,18 @@ export default function OrdersPage() {
       .from('orders')
       .update(updates)
       .eq('id', orderId)
+  }
+
+  async function deleteOrder(orderId: string) {
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId)
+    
+    if (error) {
+      console.error('Error deleting order:', error)
+      throw error
+    }
   }
 
   function exportToCSV() {
@@ -275,6 +289,7 @@ export default function OrdersPage() {
           onClose={() => setSelectedOrder(null)}
           onUpdateStatus={updateOrderStatus}
           onUpdateOrder={updateOrder}
+          onDeleteOrder={deleteOrder}
         />
       )}
     </div>
