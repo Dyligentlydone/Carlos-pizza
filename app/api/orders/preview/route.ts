@@ -63,6 +63,14 @@ export async function POST(request: NextRequest) {
     const items: PreviewItemInput[] = body.items.map((it: any) => ({
       name: String(it?.name ?? ''),
       quantity: typeof it?.quantity === 'number' ? it.quantity : parseInt(it?.quantity) || 1,
+      size:
+        typeof it?.size === 'string'
+          ? it.size
+          : typeof it?.pizza_size === 'string'
+          ? it.pizza_size
+          : typeof it?.pizzaSize === 'string'
+          ? it.pizzaSize
+          : undefined,
       customizations:
         typeof it?.customizations === 'string'
           ? it.customizations

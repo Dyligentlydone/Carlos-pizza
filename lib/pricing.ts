@@ -14,6 +14,7 @@ export interface PreviewItemInput {
   name: string
   quantity?: number
   customizations?: string
+  size?: string
 }
 
 export interface PricedItem {
@@ -118,6 +119,16 @@ function detectSize(name: string): Size | null {
   return null
 }
 
+function normalizeExplicitSize(value?: string): Size | null {
+  if (!value) return null
+  const n = normalize(value).replace(/[_-]/g, ' ')
+  if (n === 'xl' || n === 'extra large' || n === 'x large') return 'xl'
+  if (n === 'large') return 'large'
+  if (n === 'medium') return 'medium'
+  if (n === 'small') return 'small'
+  return null
+}
+
 function detectSpecialty(name: string): string | null {
   const n = normalize(name)
   for (const alias in SPECIALTY_ALIASES) {
@@ -215,8 +226,11 @@ function priceItem(input: PreviewItemInput): PricedItem | { error: string } {
     }
   }
 
-  // 3) PIZZAS — must have a size
-  const size = detectSize(rawName)
+  // 3) PIZZAS — size can come from explicit field, name, or customizations
+  const explicitSize = normalizeExplicitSize(input.size)
+  const sizeFromName = detectSize(rawName)
+  const sizeFromCustomizations = input.customizations ? detectSize(input.customizations) : null
+  const size = explicitSize || sizeFromName || sizeFromCustomizations
   const specialty = detectSpecialty(rawName)
 
   if (specialty) {
