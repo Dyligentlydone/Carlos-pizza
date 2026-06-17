@@ -91,6 +91,8 @@ const SIDES: Record<string, number> = {
   'wings (10pc)': 9.99,
   'caesar salad': 6.99,
   salad: 6.99,
+  breadsticks: 4.99,
+  'cheese breadsticks': 4.99,
 }
 
 const DRINKS: Record<string, number> = {
@@ -116,6 +118,8 @@ function detectSize(name: string): Size | null {
   if (/\blarge\b/.test(n)) return 'large'
   if (/\bmedium\b/.test(n)) return 'medium'
   if (/\bsmall\b/.test(n)) return 'small'
+  const numeric = detectNumericSize(n)
+  if (numeric) return numeric
   return null
 }
 
@@ -126,6 +130,25 @@ function normalizeExplicitSize(value?: string): Size | null {
   if (n === 'large') return 'large'
   if (n === 'medium') return 'medium'
   if (n === 'small') return 'small'
+  const numeric = detectNumericSize(n)
+  if (numeric) return numeric
+  return null
+}
+
+function detectNumericSize(value: string): Size | null {
+  const match = value.match(/\b(10|12|14|16|18)("|\s*inch|\s*in)?\b/)
+  if (!match) return null
+  switch (match[1]) {
+    case '10':
+      return 'small'
+    case '12':
+      return 'medium'
+    case '14':
+      return 'large'
+    case '16':
+    case '18':
+      return 'xl'
+  }
   return null
 }
 
