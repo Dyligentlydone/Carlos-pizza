@@ -43,25 +43,34 @@ export interface PriceCalculationResult {
 
 const BASE_PIZZA_PRICES: Record<Size, number> = {
   small: 10.99,
-  medium: 14.99,
+  medium: 12,
   large: 18.99,
-  xl: 22.99,
+  xl: 16,
 }
 
-const SPECIALTY_PIZZAS: Record<string, Record<Size, number>> = {
-  supreme: { small: 15.99, medium: 19.99, large: 24.99, xl: 28.99 },
-  'meat lovers': { small: 14.99, medium: 18.99, large: 23.99, xl: 27.99 },
-  'veggie delight': { small: 13.99, medium: 17.99, large: 21.99, xl: 25.99 },
+const SPECIALTY_PIZZAS: Record<string, Partial<Record<Size, number>>> = {
+  'bbq chicken': { medium: 21, xl: 23 },
+  margherita: { medium: 15, xl: 19 },
+  'meat lovers': { medium: 19, xl: 23 },
+  pepperoni: { medium: 13.75, xl: 17.75 },
+  supreme: { medium: 21, xl: 25 },
+  'chicken pesto': { medium: 19, xl: 23 },
 }
 
 // Aliases / alternate names customers/AI might say
 const SPECIALTY_ALIASES: Record<string, string> = {
+  'bbq chicken': 'bbq chicken',
+  'barbecue chicken': 'bbq chicken',
+  margherita: 'margherita',
+  margarita: 'margherita',
   'meat lover': 'meat lovers',
+  "meat lover's": 'meat lovers',
+  'meat lover’s': 'meat lovers',
   meatlovers: 'meat lovers',
   'meat-lovers': 'meat lovers',
-  veggie: 'veggie delight',
-  vegetarian: 'veggie delight',
-  'veggie supreme': 'veggie delight',
+  pepperoni: 'pepperoni',
+  supreme: 'supreme',
+  'chicken pesto': 'chicken pesto',
 }
 
 const TOPPING_PRICE = 1.5
@@ -85,14 +94,23 @@ const VALID_TOPPINGS = [
 ]
 
 const SIDES: Record<string, number> = {
+  'cheesy breadsticks': 10,
+  'four cheesy bread': 10,
+  'big o breadsticks': 10,
+  breadsticks: 10,
   'garlic bread': 4.99,
   wings: 9.99,
   '10pc wings': 9.99,
   'wings (10pc)': 9.99,
-  'caesar salad': 6.99,
-  salad: 6.99,
-  breadsticks: 4.99,
-  'cheese breadsticks': 4.99,
+  'spinach & goat cheese salad': 7,
+  'spinach and goat cheese salad': 7,
+  'caesar salad': 11,
+  salad: 7,
+  'side of marinara': 0.5,
+  marinara: 0.5,
+  'side of calabrian honey': 0.5,
+  'calabrian honey': 0.5,
+  ranch: 0.5,
 }
 
 const DRINKS: Record<string, number> = {
@@ -145,7 +163,7 @@ function detectNumericSize(value: string): Size | null {
     eighteen: '18',
   }
 
-  let normalizedValue = value
+  let normalizedValue = value.replace(/[”“]/g, '"')
   for (const word in WORD_TO_NUMBER) {
     normalizedValue = normalizedValue.replace(
       new RegExp(`\\b${word}\\b`, 'g'),
@@ -278,6 +296,9 @@ function priceItem(input: PreviewItemInput): PricedItem | { error: string } {
       return { error: `Size is required for "${rawName}" (small, medium, large, or XL)` }
     }
     const base = SPECIALTY_PIZZAS[specialty][size]
+    if (base == null) {
+      return { error: `Size is not offered for "${rawName}"` }
+    }
     // Extra toppings beyond the specialty (from customizations only)
     const extraToppings = extractToppingsFromCustomizations(input.customizations)
     const toppingsCost = extraToppings.length * TOPPING_PRICE
