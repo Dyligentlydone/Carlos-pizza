@@ -136,7 +136,24 @@ function normalizeExplicitSize(value?: string): Size | null {
 }
 
 function detectNumericSize(value: string): Size | null {
-  const match = value.match(/\b(10|12|14|16|18)("|\s*inch|\s*in)?\b/)
+  // Map both numeric ("16") and spelled-out ("sixteen") inch sizes.
+  const WORD_TO_NUMBER: Record<string, string> = {
+    ten: '10',
+    twelve: '12',
+    fourteen: '14',
+    sixteen: '16',
+    eighteen: '18',
+  }
+
+  let normalizedValue = value
+  for (const word in WORD_TO_NUMBER) {
+    normalizedValue = normalizedValue.replace(
+      new RegExp(`\\b${word}\\b`, 'g'),
+      WORD_TO_NUMBER[word]
+    )
+  }
+
+  const match = normalizedValue.match(/\b(10|12|14|16|18)("|\s*inch|\s*in)?\b/)
   if (!match) return null
   switch (match[1]) {
     case '10':
