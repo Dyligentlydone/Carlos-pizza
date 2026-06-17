@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { Pizza, Home, ShoppingBag, Settings, LogOut } from 'lucide-react'
+import { Pizza, Home, ShoppingBag, Settings, LogOut, Monitor, PhoneCall } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
@@ -26,6 +26,8 @@ export function DashboardNav({ user }: DashboardNavProps) {
   const navItems = [
     { href: '/dashboard', label: 'Home', icon: Home },
     { href: '/dashboard/orders', label: 'Orders', icon: ShoppingBag },
+    { href: '/dashboard/display', label: 'Display', icon: Monitor },
+    { href: '/dashboard/communications', label: 'Communications', icon: PhoneCall },
     { href: '/dashboard/settings', label: 'Settings', icon: Settings },
   ]
 
