@@ -14,7 +14,7 @@ import { MapPin, Phone, Mail, Clock, Package, Edit2, Save, X, Trash2, Plus } fro
 interface OrderDetailsModalProps {
   order: Order
   onClose: () => void
-  onUpdateStatus: (orderId: string, status: string) => void
+  onUpdateStatus: (orderId: string, status: Order['status']) => void | Promise<void>
   onUpdateOrder?: (orderId: string, updates: Partial<Order>) => Promise<void>
   onDeleteOrder?: (orderId: string) => Promise<void>
 }
@@ -354,7 +354,9 @@ export function OrderDetailsModal({ order, onClose, onUpdateStatus, onUpdateOrde
                 <label className="text-sm font-medium">Update Status</label>
                 <Select
                   value={order.status}
-                  onChange={(e) => onUpdateStatus(order.id, e.target.value)}
+                  onChange={(e) =>
+                    onUpdateStatus(order.id, e.target.value as Order['status'])
+                  }
                   className="w-full"
                 >
                   <option value="pending">Pending</option>

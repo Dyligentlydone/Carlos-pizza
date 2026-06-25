@@ -95,11 +95,27 @@ export default function OrdersPage() {
     setFilteredOrders(filtered)
   }
 
-  async function updateOrderStatus(orderId: string, status: string) {
-    await supabase
+  async function updateOrderStatus(orderId: string, status: Order['status']) {
+    const { error } = await supabase
       .from('orders')
       .update({ status })
       .eq('id', orderId)
+
+    if (error) {
+      console.error('Failed to update order status', error)
+      return
+    }
+
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === orderId
+          ? {
+              ...order,
+              status,
+            }
+          : order
+      )
+    )
   }
 
   async function updateOrder(orderId: string, updates: Partial<Order>) {
@@ -264,7 +280,9 @@ export default function OrdersPage() {
                       <div onClick={(e) => e.stopPropagation()}>
                         <Select
                           value={order.status}
-                          onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                          onChange={(e) =>
+                            updateOrderStatus(order.id, e.target.value as Order['status'])
+                          }
                           className="w-[140px]"
                         >
                           <option value="pending">Pending</option>
