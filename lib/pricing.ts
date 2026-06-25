@@ -198,6 +198,25 @@ function detectSpecialty(name: string): string | null {
   return null
 }
 
+function resolveSpecialtySize(specialty: string, requested: Size): Size {
+  const available = SPECIALTY_PIZZAS[specialty]
+  if (!available) return requested
+  if (available[requested] != null) return requested
+
+  const fallbackOrder: Record<Size, Size[]> = {
+    xl: ['xl', 'large', 'medium', 'small'],
+    large: ['large', 'xl', 'medium', 'small'],
+    medium: ['medium', 'large', 'xl', 'small'],
+    small: ['small', 'medium', 'large', 'xl'],
+  }
+
+  for (const size of fallbackOrder[requested]) {
+    if (available[size] != null) return size
+  }
+
+  return requested
+}
+
 function extractToppingsFromName(name: string): string[] {
   const n = normalize(name)
   const found: string[] = []
@@ -295,7 +314,8 @@ function priceItem(input: PreviewItemInput): PricedItem | { error: string } {
     if (!size) {
       return { error: `Size is required for "${rawName}" (small, medium, large, or XL)` }
     }
-    const base = SPECIALTY_PIZZAS[specialty][size]
+    const resolvedSize = resolveSpecialtySize(specialty, size)
+    const base = SPECIALTY_PIZZAS[specialty][resolvedSize]
     if (base == null) {
       return { error: `Size is not offered for "${rawName}"` }
     }
@@ -312,7 +332,7 @@ function priceItem(input: PreviewItemInput): PricedItem | { error: string } {
         base,
         toppings: round2(toppingsCost),
         topping_names: extraToppings,
-        size,
+        size: resolvedSize,
         category: 'specialty_pizza',
       },
     }
